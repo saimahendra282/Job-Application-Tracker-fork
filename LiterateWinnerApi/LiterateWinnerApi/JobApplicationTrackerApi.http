@@ -1,0 +1,6 @@
+@LiterateWinnerApi_HostAddress = http://localhost:5108
+
+GET {{LiterateWinnerApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
