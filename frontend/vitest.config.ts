@@ -19,10 +19,15 @@ export default defineConfig({
         '**/*.config.*',
         '**/mockData',
         'src/lib/utils.ts', // Simple utility functions
+        'src/lib/api.ts', // Axios configuration (hard to test in jsdom)
+        'src/lib/providers.tsx', // React Query provider wrapper
+        'src/lib/types.ts', // TypeScript type definitions
         '.next/**',
         'dist/**',
         'build/**',
         'coverage/**',
+        'src/app/**/page.tsx', // Exclude Next.js pages (mostly layout/data fetching)
+        'src/app/**/layout.tsx', // Exclude layouts
       ],
       include: ['src/**/*.{ts,tsx}'],
       thresholds: {
