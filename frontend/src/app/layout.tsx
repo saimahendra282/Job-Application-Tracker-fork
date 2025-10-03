@@ -1,0 +1,40 @@
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Providers } from "@/lib/providers";
+import { Navigation } from "@/components/navigation";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+export const metadata: Metadata = {
+  title: "Job Application Tracker",
+  description: "Track your job applications, interviews, and offers",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <Providers>
+          <div className="h-full relative">
+            <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 z-80">
+              <Navigation />
+            </div>
+            <main className="md:pl-72 pb-10">
+              <div className="px-4 py-6 md:px-8">
+                {children}
+              </div>
+            </main>
+          </div>
+        </Providers>
+      </body>
+    </html>
+  );
+}
