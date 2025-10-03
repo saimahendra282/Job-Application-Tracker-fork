@@ -1,0 +1,49 @@
+MIT License
+
+Copyright (c) 2024 Job Application Tracker - Hacktoberfest 2025
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Additional Terms for Hacktoberfest 2025
+
+This project is participating in Hacktoberfest 2025. By contributing to this project during the Hacktoberfest 2025 event period (October 1-31, 2024), you agree to the following additional terms:
+
+1. **Quality Contributions**: All contributions must be meaningful and add value to the project. Spam, automated, or low-quality contributions will not be accepted.
+
+2. **Hacktoberfest Eligibility**: Only contributions that meet the Hacktoberfest 2025 quality standards will be marked as eligible for the event.
+
+3. **Code of Conduct**: All contributors must follow the project's Code of Conduct and the Hacktoberfest 2025 participation guidelines.
+
+4. **Attribution**: Contributors will be properly attributed in the project documentation and may be recognized for their contributions.
+
+5. **Review Process**: All contributions will be subject to review by project maintainers before being accepted.
+
+## Third-Party Licenses
+
+This project may include third-party libraries and dependencies. Each third-party component is licensed under its respective license terms. A list of third-party licenses can be found in the project documentation.
+
+## Trademark Notice
+
+Hacktoberfest is a trademark of DigitalOcean, LLC. This project is not officially affiliated with DigitalOcean or Hacktoberfest, but participates in the event in accordance with their guidelines.
+
+---
+
+For questions about this license, please contact: legal@jobtracker.com

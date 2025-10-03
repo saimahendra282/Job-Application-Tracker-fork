@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🎉 Hacktoberfest 2025 Discussion
+    url: https://github.com/ravindu0823/Job-Application-Tracker/discussions/categories/hacktoberfest-2025
+    about: Discuss Hacktoberfest 2025 participation, ask questions, and connect with other contributors
+  - name: 💬 General Discussion
+    url: https://github.com/ravindu0823/Job-Application-Tracker/discussions/categories/general
+    about: General questions, ideas, and community discussions
+  - name: 📚 Documentation
+    url: https://github.com/ravindu0823/Job-Application-Tracker/wiki
+    about: Project documentation, guides, and tutorials
+  - name: 🛡️ Security
+    url: https://github.com/ravindu0823/Job-Application-Tracker/security/advisories/new
+    about: Report security vulnerabilities privately
+  - name: 🌐 Website
+    url: https://ravinduperera.vercel.app/
+    about: Visit our project website for more information

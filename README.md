@@ -54,8 +54,8 @@ The Job Application Tracker is designed to streamline the job search process by 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/job-application-tracker.git
-   cd job-application-tracker
+   git clone https://github.com/ravindu0823/Job-Application-Tracker.git
+   cd Job-Application-Tracker
    ```
 
 2. **Navigate to the API project**
@@ -299,10 +299,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📧 **Email**: support@jobtracker.com
-- 💬 **Discord**: [Join our Discord](https://discord.gg/jobtracker)
-- 📖 **Documentation**: [Wiki](https://github.com/yourusername/job-application-tracker/wiki)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/job-application-tracker/issues)
+- 📧 **Email**: guestpc87@gmail.com
+- 🌐 **Website**: [ravinduperera.vercel.app](https://ravinduperera.vercel.app/)
+- 📖 **Documentation**: [Wiki](https://github.com/ravindu0823/Job-Application-Tracker/wiki)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/ravindu0823/Job-Application-Tracker/issues)
 
 ---
 
