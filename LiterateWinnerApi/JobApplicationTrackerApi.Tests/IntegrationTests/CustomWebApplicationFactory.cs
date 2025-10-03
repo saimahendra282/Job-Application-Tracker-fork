@@ -1,4 +1,5 @@
 using JobApplicationTrackerApi.Persistence.IdentityContext;
+using JobApplicationTrackerApi.Persistence.DefaultContext;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -21,26 +22,13 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Set the environment to Testing first so the main app skips SQL Server registration
+        builder.UseEnvironment("Testing");
+
         builder.ConfigureServices(services =>
         {
-            // Remove ONLY the IdentityContext DbContext registration, preserving Identity services
-            var dbContextDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(IdentityContext));
-            if (dbContextDescriptor != null)
-            {
-                services.Remove(dbContextDescriptor);
-            }
-
-            // Remove DbContextOptions<IdentityContext>
-            var dbContextOptionsDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<IdentityContext>));
-            if (dbContextOptionsDescriptor != null)
-            {
-                services.Remove(dbContextOptionsDescriptor);
-            }
-
             // Remove any Redis or distributed cache services
-            services.RemoveAll(typeof(StackExchange.Redis.IConnectionMultiplexer));
+            services.RemoveAll<StackExchange.Redis.IConnectionMultiplexer>();
 
             // Add in-memory distributed cache instead of Redis
             services.AddDistributedMemoryCache();
@@ -48,20 +36,38 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
 
         builder.ConfigureTestServices(services =>
         {
-            // Add Identity DbContext using in-memory database
-            // Use a shared root to maintain data between contexts in the same test
+            // Since the main app skips database registration in Testing environment,
+            // we can safely add our in-memory databases here without conflicts
+
+            // Add IdentityContext
             services.AddDbContext<IdentityContext>(options =>
             {
                 options.UseInMemoryDatabase("TestIdentityDb", _databaseRoot);
+                // Disable service provider caching to avoid conflicts
+                options.EnableServiceProviderCaching(false);
+                // Enable sensitive data logging for better test debugging
+                options.EnableSensitiveDataLogging();
             });
 
-            // Ensure the database is created and seeded
+            // Add DefaultContext
+            services.AddDbContext<DefaultContext>(options =>
+            {
+                options.UseInMemoryDatabase("TestDefaultDb", _databaseRoot);
+                // Disable service provider caching to avoid conflicts
+                options.EnableServiceProviderCaching(false);
+                // Enable sensitive data logging for better test debugging
+                options.EnableSensitiveDataLogging();
+            });
+
+            // Ensure the databases are created and seeded
             var serviceProvider = services.BuildServiceProvider();
             using var scope = serviceProvider.CreateScope();
+
             var identityContext = scope.ServiceProvider.GetRequiredService<IdentityContext>();
             identityContext.Database.EnsureCreated();
-        });
 
-        builder.UseEnvironment("Testing");
+            var defaultContext = scope.ServiceProvider.GetRequiredService<DefaultContext>();
+            defaultContext.Database.EnsureCreated();
+        });
     }
 }
