@@ -17,6 +17,7 @@ using JobApplicationTrackerApi.Services.CacheService;
 using JobApplicationTrackerApi.Services.ConcurrencyService;
 using JobApplicationTrackerApi.Services.IdentityErrorHandlerService;
 using JobApplicationTrackerApi.Services.IdentityService;
+using JobApplicationTrackerApi.Services.MonitoringService;
 using JobApplicationTrackerApi.Services.TokenService;
 using JobApplicationTrackerApi.SignalR;
 using LiterateWinnerApi.Services.CacheService;
@@ -650,10 +651,10 @@ public static class DependencyInjection
         services.AddSingleton(meter);
 
         // Register monitoring service
-        // services.AddSingleton<IMonitoringService, MonitoringService>();
+        services.AddSingleton<IMonitoringService, MonitoringService>();
 
         // Add request tracking middleware
-        // services.AddScoped<RequestTracking>();
+        services.AddScoped<RequestTracking>();
 
         return services;
     }
@@ -800,7 +801,7 @@ public static class DependencyInjection
     }
 
     // Request tracking class for monitoring
-    /*public class RequestTracking(IMonitoringService monitoringService)
+    public class RequestTracking(IMonitoringService monitoringService)
     {
         public void TrackRequest(string endpoint, string method)
         {
@@ -811,5 +812,5 @@ public static class DependencyInjection
         {
             monitoringService.RecordRequestEnd(endpoint, method, elapsedMs, isSuccess);
         }
-    }*/
+    }
 }
