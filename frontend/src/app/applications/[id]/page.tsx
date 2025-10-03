@@ -1,9 +1,15 @@
+"use client";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Calendar, MapPin, DollarSign, ExternalLink } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Calendar, MapPin, DollarSign, ExternalLink, Bold, Italic, Underline, List, Users2 } from 'lucide-react';
 import Link from 'next/link';
+import { useMemo, useRef, useState } from 'react';
+import type { Note, NoteType } from '@/lib/types';
 
 export default function ApplicationDetailPage({ params }: { params: { id: string } }) {
   // Mock data - will be replaced with real API call
@@ -35,15 +41,97 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
     },
   ];
 
-  const notes = [
+  const initialNotes: Note[] = [
     {
       id: 1,
+      applicationId: Number(params.id) || 0,
       title: 'Company Research',
-      content: 'Tech Company Inc. is a fast-growing startup focused on AI solutions...',
+      content:
+        'Tech Company Inc. is a fast-growing startup focused on <b>AI solutions</b> targeting healthcare. Market size ~ $20B. Competitors: A, B, C. Recent funding: Series B.',
       noteType: 'Research',
-      createdAt: '2025-03-01',
+      createdAt: new Date('2025-03-01').toISOString(),
+      updatedAt: new Date('2025-03-01').toISOString(),
     },
   ];
+
+  const [notes, setNotes] = useState<Note[]>(initialNotes);
+  const [noteFilter, setNoteFilter] = useState<NoteType | 'All'>('All');
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteType, setNoteType] = useState<NoteType>('Research');
+  const editorRef = useRef<HTMLDivElement | null>(null);
+
+  const noteTypes: NoteType[] = useMemo(
+    () => ['Research', 'Interview', 'Follow-up', 'General', 'Offer'],
+    []
+  );
+
+  const filteredNotes = useMemo(
+    () => (noteFilter === 'All' ? notes : notes.filter((n) => n.noteType === noteFilter)),
+    [notes, noteFilter]
+  );
+
+  function openNewNote() {
+    setEditingNote(null);
+    setNoteTitle('');
+    setNoteType('Research');
+    setIsNoteModalOpen(true);
+    requestAnimationFrame(() => {
+      if (editorRef.current) editorRef.current.innerHTML = '';
+    });
+  }
+
+  function openEditNote(note: Note) {
+    setEditingNote(note);
+    setNoteTitle(note.title);
+    setNoteType(note.noteType);
+    setIsNoteModalOpen(true);
+    requestAnimationFrame(() => {
+      if (editorRef.current) editorRef.current.innerHTML = note.content;
+    });
+  }
+
+  function execFormatting(command: string) {
+    document.execCommand(command);
+  }
+
+  function handleSaveNote() {
+    const content = editorRef.current?.innerHTML?.trim() || '';
+    if (!noteTitle.trim() || !content.trim()) return;
+
+    if (editingNote) {
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === editingNote.id
+            ? { ...n, title: noteTitle.trim(), noteType, content, updatedAt: new Date().toISOString() }
+            : n
+        )
+      );
+    } else {
+      const newNote: Note = {
+        id: (notes.at(-1)?.id || 0) + 1,
+        applicationId: Number(params.id) || 0,
+        title: noteTitle.trim(),
+        content,
+        noteType,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setNotes((prev) => [newNote, ...prev]);
+    }
+
+    setIsNoteModalOpen(false);
+    setEditingNote(null);
+    setNoteTitle('');
+    if (editorRef.current) editorRef.current.innerHTML = '';
+  }
+
+  function handleDeleteNote(id: number) {
+    const ok = window.confirm('Delete this note? This cannot be undone.');
+    if (!ok) return;
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+  }
 
   const getStatusColor = (status: string) => {
     const colors = {
@@ -117,6 +205,9 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="interviews">Interviews</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="contacts">Contacts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -200,24 +291,93 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
         </TabsContent>
 
         <TabsContent value="notes" className="space-y-4">
-          <div className="flex justify-end">
-            <Button>Add Note</Button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-neutral-600">Filter</span>
+              <Select value={noteFilter} onValueChange={(v) => setNoteFilter(v as (NoteType | 'All'))}>
+                <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="All" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  {noteTypes.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Dialog open={isNoteModalOpen} onOpenChange={setIsNoteModalOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={openNewNote}>Add Note</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingNote ? 'Edit Note' : 'Add Note'}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <Input
+                    placeholder="Title"
+                    value={noteTitle}
+                    onChange={(e) => setNoteTitle(e.target.value)}
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutral-600">Category</span>
+                    <Select value={noteType} onValueChange={(v) => setNoteType(v as NoteType)}>
+                      <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {noteTypes.map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="border rounded-md">
+                    <div className="flex items-center gap-1 border-b p-2">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => execFormatting('bold')} aria-label="Bold">
+                        <Bold className="h-4 w-4" />
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => execFormatting('italic')} aria-label="Italic">
+                        <Italic className="h-4 w-4" />
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => execFormatting('underline')} aria-label="Underline">
+                        <Underline className="h-4 w-4" />
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => execFormatting('insertUnorderedList')} aria-label="Bulleted list">
+                        <List className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div
+                      ref={editorRef}
+                      contentEditable
+                      className="min-h-[160px] p-3 text-sm outline-none prose prose-sm max-w-none dark:prose-invert"
+                      aria-label="Note content editor"
+                      suppressContentEditableWarning
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setIsNoteModalOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSaveNote}>{editingNote ? 'Save Changes' : 'Add Note'}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
-          {notes.length > 0 ? (
-            notes.map((note) => (
+          {filteredNotes.length > 0 ? (
+            filteredNotes.map((note) => (
               <Card key={note.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>{note.title}</CardTitle>
-                    <Badge variant="outline">{note.noteType}</Badge>
+                    <CardTitle className="text-base font-semibold">{note.title}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{note.noteType}</Badge>
+                      <Button size="sm" variant="ghost" onClick={() => openEditNote(note)}>Edit</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteNote(note.id)}>Delete</Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-neutral-700 whitespace-pre-wrap">
-                    {note.content}
-                  </p>
+                  <div className="text-sm text-neutral-700 prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: note.content }} />
                   <p className="mt-2 text-xs text-neutral-500">
-                    {new Date(note.createdAt).toLocaleDateString()}
+                    Created {new Date(note.createdAt).toLocaleString()}
+                    {note.updatedAt && ` • Updated ${new Date(note.updatedAt).toLocaleString()}`}
                   </p>
                 </CardContent>
               </Card>
@@ -229,6 +389,72 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-neutral-600">Upload resumes, cover letters, and related files</div>
+            <Button>Upload Document</Button>
+          </div>
+          <Card>
+            <CardContent className="py-8 text-center text-neutral-500">
+              Document upload integration coming soon
+            </CardContent>
+          </Card>
+          <div className="grid gap-3 md:grid-cols-2">
+            {[{ id: 1, name: 'Resume_v3.pdf', type: 'Resume', size: '128 KB', uploadedAt: '2025-03-02' }].map((d) => (
+              <Card key={d.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{d.name}</CardTitle>
+                    <Badge variant="outline">{d.type}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-neutral-600">{d.size}</p>
+                  <p className="text-xs text-neutral-500">Uploaded {new Date(d.uploadedAt).toLocaleDateString()}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Status History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[
+                  { id: 1, oldStatus: 'Applied', newStatus: 'Interview', at: '2025-03-05', notes: 'Phone screen scheduled' },
+                ].map((h) => (
+                  <div key={h.id} className="flex items-start gap-3">
+                    <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
+                    <div>
+                      <div className="text-sm font-medium">{h.oldStatus} → {h.newStatus}</div>
+                      <div className="text-xs text-neutral-500">{new Date(h.at).toLocaleString()}</div>
+                      <div className="text-sm text-neutral-700">{h.notes}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contacts" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-neutral-600"><Users2 className="h-4 w-4" />
+              <span className="text-sm">Recruiter / Hiring Contacts</span>
+            </div>
+            <Button>Add Contact</Button>
+          </div>
+          <Card>
+            <CardContent className="py-8 text-center text-neutral-500">
+              Contacts UI coming soon
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
