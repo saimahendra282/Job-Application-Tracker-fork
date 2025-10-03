@@ -8,13 +8,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Calendar, MapPin, DollarSign, ExternalLink, Bold, Italic, Underline, List, Users2 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Note, NoteType } from '@/lib/types';
 
-export default function ApplicationDetailPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function ApplicationDetailPage({ params }: PageProps) {
+  const [paramId, setParamId] = useState<string>('');
+
+  useEffect(() => {
+    params.then(p => setParamId(p.id));
+  }, [params]);
+
   // Mock data - will be replaced with real API call
   const application = {
-    id: params.id,
+    id: paramId,
     companyName: 'Tech Company Inc.',
     position: 'Software Engineer',
     location: 'San Francisco, CA',
@@ -44,7 +54,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
   const initialNotes: Note[] = [
     {
       id: 1,
-      applicationId: Number(params.id) || 0,
+      applicationId: Number(paramId) || 0,
       title: 'Company Research',
       content:
         'Tech Company Inc. is a fast-growing startup focused on <b>AI solutions</b> targeting healthcare. Market size ~ $20B. Competitors: A, B, C. Recent funding: Series B.',
@@ -111,7 +121,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
     } else {
       const newNote: Note = {
         id: (notes.at(-1)?.id || 0) + 1,
-        applicationId: Number(params.id) || 0,
+        applicationId: Number(paramId) || 0,
         title: noteTitle.trim(),
         content,
         noteType,

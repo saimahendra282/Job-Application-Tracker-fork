@@ -7,7 +7,20 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, MapPin, Calendar, Columns, Rows } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+
+type ApplicationStatus = 'Applied' | 'Interview' | 'Offer' | 'Rejected';
+type Priority = 'High' | 'Medium' | 'Low';
+
+interface Application {
+  id: number;
+  companyName: string;
+  position: string;
+  location: string;
+  status: ApplicationStatus;
+  priority: Priority;
+  applicationDate: string;
+}
 
 export default function ApplicationsPage() {
   // Mock data - will be replaced with real API calls
@@ -16,9 +29,9 @@ export default function ApplicationsPage() {
   const [newCompany, setNewCompany] = useState('');
   const [newPosition, setNewPosition] = useState('');
   const [newLocation, setNewLocation] = useState('Remote');
-  const [newStatus, setNewStatus] = useState<'Applied' | 'Interview' | 'Offer' | 'Rejected'>('Applied');
-  const [newPriority, setNewPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
-  const [applications, setApplications] = useState(
+  const [newStatus, setNewStatus] = useState<ApplicationStatus>('Applied');
+  const [newPriority, setNewPriority] = useState<Priority>('Medium');
+  const [applications, setApplications] = useState<Application[]>(
     [
     {
       id: 1,
@@ -56,12 +69,12 @@ export default function ApplicationsPage() {
       priority: 'Low',
       applicationDate: '2025-02-20',
     },
-    ] as const
+    ]
   );
 
   function handleAddApplication() {
     if (!newCompany.trim() || !newPosition.trim()) return;
-    setApplications((prev: any) => [
+    setApplications((prev) => [
       {
         id: (prev.at(-1)?.id || 0) + 1,
         companyName: newCompany.trim(),
@@ -131,10 +144,10 @@ export default function ApplicationsPage() {
                 <div className="flex flex-wrap gap-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-neutral-600">Status</span>
-                    <Select value={newStatus} onValueChange={(v) => setNewStatus(v as any)}>
+                    <Select value={newStatus} onValueChange={(v) => setNewStatus(v as ApplicationStatus)}>
                       <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        {['Applied','Interview','Offer','Rejected'].map(s => (
+                        {(['Applied','Interview','Offer','Rejected'] as const).map(s => (
                           <SelectItem key={s} value={s}>{s}</SelectItem>
                         ))}
                       </SelectContent>
@@ -142,10 +155,10 @@ export default function ApplicationsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-neutral-600">Priority</span>
-                    <Select value={newPriority} onValueChange={(v) => setNewPriority(v as any)}>
+                    <Select value={newPriority} onValueChange={(v) => setNewPriority(v as Priority)}>
                       <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        {['High','Medium','Low'].map(p => (
+                        {(['High','Medium','Low'] as const).map(p => (
                           <SelectItem key={p} value={p}>{p}</SelectItem>
                         ))}
                       </SelectContent>
@@ -175,7 +188,7 @@ export default function ApplicationsPage() {
 
       {viewMode === 'list' ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {applications.map((app: any) => (
+          {applications.map((app) => (
             <Link key={app.id} href={`/applications/${app.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardHeader>
@@ -218,7 +231,7 @@ export default function ApplicationsPage() {
                 <CardTitle className="text-sm">{col}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {applications.filter((a: any) => a.status === col).map((app: any) => (
+                {applications.filter((a) => a.status === col).map((app) => (
                   <Link key={app.id} href={`/applications/${app.id}`}>
                     <div className="border rounded-md p-3 hover:bg-neutral-50 dark:hover:bg-neutral-900 cursor-pointer">
                       <div className="flex items-center justify-between">
