@@ -1,13 +1,25 @@
+"use client";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Search, MapPin, Calendar, Columns, Rows } from 'lucide-react';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
 export default function ApplicationsPage() {
   // Mock data - will be replaced with real API calls
-  const applications = [
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newCompany, setNewCompany] = useState('');
+  const [newPosition, setNewPosition] = useState('');
+  const [newLocation, setNewLocation] = useState('Remote');
+  const [newStatus, setNewStatus] = useState<'Applied' | 'Interview' | 'Offer' | 'Rejected'>('Applied');
+  const [newPriority, setNewPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
+  const [applications, setApplications] = useState(
+    [
     {
       id: 1,
       companyName: 'Tech Company Inc.',
@@ -44,7 +56,27 @@ export default function ApplicationsPage() {
       priority: 'Low',
       applicationDate: '2025-02-20',
     },
-  ];
+    ] as const
+  );
+
+  function handleAddApplication() {
+    if (!newCompany.trim() || !newPosition.trim()) return;
+    setApplications((prev: any) => [
+      {
+        id: (prev.at(-1)?.id || 0) + 1,
+        companyName: newCompany.trim(),
+        position: newPosition.trim(),
+        location: newLocation.trim(),
+        status: newStatus,
+        priority: newPriority,
+        applicationDate: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+    setIsAddOpen(false);
+    setNewCompany('');
+    setNewPosition('');
+  }
 
   const getStatusColor = (status: string) => {
     const colors = {
@@ -74,10 +106,60 @@ export default function ApplicationsPage() {
             Manage all your job applications
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Application
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('list')}>
+            <Rows className="mr-2 h-4 w-4" /> List
+          </Button>
+          <Button variant={viewMode === 'kanban' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('kanban')}>
+            <Columns className="mr-2 h-4 w-4" /> Kanban
+          </Button>
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Application
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Application</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <Input placeholder="Company Name *" value={newCompany} onChange={(e) => setNewCompany(e.target.value)} />
+                <Input placeholder="Position *" value={newPosition} onChange={(e) => setNewPosition(e.target.value)} />
+                <Input placeholder="Location" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} />
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutral-600">Status</span>
+                    <Select value={newStatus} onValueChange={(v) => setNewStatus(v as any)}>
+                      <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {['Applied','Interview','Offer','Rejected'].map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutral-600">Priority</span>
+                    <Select value={newPriority} onValueChange={(v) => setNewPriority(v as any)}>
+                      <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {['High','Medium','Low'].map(p => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddApplication}>Save</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex items-center space-x-2">
@@ -91,42 +173,67 @@ export default function ApplicationsPage() {
         <Button variant="outline">Filter</Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {applications.map((app) => (
-          <Link key={app.id} href={`/applications/${app.id}`}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{app.companyName}</CardTitle>
-                    <p className="text-sm font-medium text-neutral-700">
-                      {app.position}
-                    </p>
+      {viewMode === 'list' ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {applications.map((app: any) => (
+            <Link key={app.id} href={`/applications/${app.id}`}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg">{app.companyName}</CardTitle>
+                      <p className="text-sm font-medium text-neutral-700">
+                        {app.position}
+                      </p>
+                    </div>
+                    <Badge className={getPriorityColor(app.priority)} variant="secondary">
+                      {app.priority}
+                    </Badge>
                   </div>
-                  <Badge className={getPriorityColor(app.priority)} variant="secondary">
-                    {app.priority}
-                  </Badge>
-                </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center text-sm text-neutral-500">
+                    <MapPin className="mr-1 h-3 w-3" />
+                    {app.location}
+                  </div>
+                  <div className="flex items-center text-sm text-neutral-500">
+                    <Calendar className="mr-1 h-3 w-3" />
+                    Applied: {new Date(app.applicationDate).toLocaleDateString()}
+                  </div>
+                  <div className="mt-4">
+                    <Badge className={getStatusColor(app.status)} variant="secondary">
+                      {app.status}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-4">
+          {(['Applied','Interview','Offer','Rejected'] as const).map((col) => (
+            <Card key={col}>
+              <CardHeader>
+                <CardTitle className="text-sm">{col}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center text-sm text-neutral-500">
-                  <MapPin className="mr-1 h-3 w-3" />
-                  {app.location}
-                </div>
-                <div className="flex items-center text-sm text-neutral-500">
-                  <Calendar className="mr-1 h-3 w-3" />
-                  Applied: {new Date(app.applicationDate).toLocaleDateString()}
-                </div>
-                <div className="mt-4">
-                  <Badge className={getStatusColor(app.status)} variant="secondary">
-                    {app.status}
-                  </Badge>
-                </div>
+              <CardContent className="space-y-3">
+                {applications.filter((a: any) => a.status === col).map((app: any) => (
+                  <Link key={app.id} href={`/applications/${app.id}`}>
+                    <div className="border rounded-md p-3 hover:bg-neutral-50 dark:hover:bg-neutral-900 cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">{app.companyName}</span>
+                        <Badge className={getPriorityColor(app.priority)} variant="secondary">{app.priority}</Badge>
+                      </div>
+                      <p className="text-xs text-neutral-600">{app.position}</p>
+                    </div>
+                  </Link>
+                ))}
               </CardContent>
             </Card>
-          </Link>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
