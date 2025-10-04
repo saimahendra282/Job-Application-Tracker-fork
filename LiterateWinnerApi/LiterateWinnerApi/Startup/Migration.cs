@@ -24,11 +24,7 @@ public static class Migration
         });
 
         // Apply migrations for Default context
-        app.MigrateDbContext<DefaultContext>((context, services) =>
-        {
-            var logger = services.GetRequiredService<ILogger<DefaultContext>>();
-            DefaultContextSeed.SeedAsync(context, logger).Wait();
-        });
+        app.MigrateDbContext<DefaultContext>((context, services) => { });
     }
 
     private static bool IsInKubernetes(this IApplicationBuilder app)
