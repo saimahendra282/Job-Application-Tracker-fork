@@ -47,6 +47,7 @@ app.UseResponseCaching();
 app.UseRateLimiter();
 
 app.UseOpenApi();
+app.UseSwagger(options => { options.RouteTemplate = "/openapi/{documentName}.json"; });
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapScalarApiReference();
