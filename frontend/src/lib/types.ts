@@ -78,3 +78,40 @@ export interface StatusCounts {
   Offer: number;
   Rejected: number;
 }
+
+export type SortOption = 
+  | 'applicationDate-desc'
+  | 'applicationDate-asc'
+  | 'companyName-asc'
+  | 'companyName-desc'
+  | 'status'
+  | 'priority'
+  | 'responseTime';
+
+export interface SearchFilters {
+  search: string;
+  status: ApplicationStatus[];
+  priority: Priority[];
+  dateRange: {
+    from?: string;
+    to?: string;
+  };
+  salaryRange: {
+    min?: number;
+    max?: number;
+  };
+  location: string[];
+  hasInterviews?: boolean;
+}
+
+export interface FilterPreset {
+  id: string;
+  name: string;
+  filters: SearchFilters;
+  createdAt: string;
+}
+
+export interface SortConfig {
+  field: SortOption;
+  direction: 'asc' | 'desc';
+}
