@@ -19,6 +19,9 @@ using JobApplicationTrackerApi.Services.IdentityErrorHandlerService;
 using JobApplicationTrackerApi.Services.IdentityService;
 using JobApplicationTrackerApi.Services.MonitoringService;
 using JobApplicationTrackerApi.Services.TokenService;
+using JobApplicationTrackerApi.Services.NotesService;
+using JobApplicationTrackerApi.Services.ContactsService;
+using JobApplicationTrackerApi.Mappings;
 using JobApplicationTrackerApi.SignalR;
 using LiterateWinnerApi.Services.CacheService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -304,6 +307,13 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IIdentityErrorHandlerService, IdentityErrorHandlerService>();
         services.AddScoped<ITokenService, TokenService>();
+
+        // Register Notes and Contacts services
+        services.AddScoped<INotesService, NotesService>();
+        services.AddScoped<IContactsService, ContactsService>();
+
+        // Register AutoMapper
+        services.AddAutoMapper(typeof(NotesMappingProfile), typeof(ContactsMappingProfile));
 
         return services;
     }
