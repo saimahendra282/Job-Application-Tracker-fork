@@ -61,7 +61,7 @@ public class ContactsService(
                     .ToListAsync();
 
                 return contacts;
-            }, TimeSpan.FromMinutes(5));
+            }, TimeSpan.FromMinutes(5)) ?? new List<ContactResponseDto>();
         }
         catch (Exception ex)
         {

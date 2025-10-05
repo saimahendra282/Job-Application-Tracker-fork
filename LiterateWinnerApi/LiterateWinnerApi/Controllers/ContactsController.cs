@@ -355,7 +355,7 @@ public class ContactsController(
 
             await _context.SaveChangesAsync();
 
-            return Ok(ApiResponse<object>.Success(null, "Contact deleted successfully"));
+            return Ok(ApiResponse<object>.Success(new object(), "Contact deleted successfully"));
         }
         catch (Exception ex)
         {
@@ -409,7 +409,7 @@ public class ContactsController(
 
             await _context.SaveChangesAsync();
 
-            return Ok(ApiResponse<object>.Success(null, "Contact set as primary successfully"));
+            return Ok(ApiResponse<object>.Success(new object(), "Contact set as primary successfully"));
         }
         catch (Exception ex)
         {

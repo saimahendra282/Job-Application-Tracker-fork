@@ -56,7 +56,7 @@ public class NotesService(
                     .ToListAsync();
 
                 return notes;
-            }, TimeSpan.FromMinutes(5));
+            }, TimeSpan.FromMinutes(5)) ?? new List<NoteResponseDto>();
         }
         catch (Exception ex)
         {
