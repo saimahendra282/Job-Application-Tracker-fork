@@ -5,22 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, MapPin, Calendar, Columns, Rows } from 'lucide-react';
+import { Plus, MapPin, Calendar, Columns, Rows } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { SearchInput, SearchInputRef } from '@/components/search-input';
+import { FilterSidebar } from '@/components/filter-sidebar';
+import { FilterChips } from '@/components/filter-chips';
+import { SortDropdown } from '@/components/sort-dropdown';
+import { useDebounce, useKeyboardShortcut, useLocalStorage } from '@/lib/hooks';
+import { filterApplications, sortApplications, getDefaultFilters, hasActiveFilters } from '@/lib/filters';
+import { SearchFilters, SortOption } from '@/lib/types';
 
-type ApplicationStatus = 'Applied' | 'Interview' | 'Offer' | 'Rejected';
-type Priority = 'High' | 'Medium' | 'Low';
-
-interface Application {
-  id: number;
-  companyName: string;
-  position: string;
-  location: string;
-  status: ApplicationStatus;
-  priority: Priority;
-  applicationDate: string;
-}
+import { Application, ApplicationStatus, Priority } from '@/lib/types';
 
 export default function ApplicationsPage() {
   // Mock data - will be replaced with real API calls
@@ -31,6 +28,68 @@ export default function ApplicationsPage() {
   const [newLocation, setNewLocation] = useState('Remote');
   const [newStatus, setNewStatus] = useState<ApplicationStatus>('Applied');
   const [newPriority, setNewPriority] = useState<Priority>('Medium');
+  
+  // Search and Filter State
+  const [filters, setFilters] = useLocalStorage<SearchFilters>('app-filters', getDefaultFilters());
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+  const [sortOption, setSortOption] = useLocalStorage<SortOption>('app-sort', 'applicationDate-desc');
+  const { value: searchValue, debouncedValue: debouncedSearch, setValue: setSearchValue } = useDebounce(filters.search, 300);
+  const searchInputRef = useRef<SearchInputRef>(null);
+  
+  // Keyboard shortcuts
+  useKeyboardShortcut(['Control', 'k'], () => {
+    searchInputRef.current?.focus();
+  });
+
+  // Update search in filters when debounced value changes
+  const updateFilters = (newFilters: SearchFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleSearchChange = (search: string) => {
+    setSearchValue(search);
+    updateFilters({ ...filters, search });
+  };
+
+  // Remove specific filter
+  const removeFilter = (filterType: string, value?: string) => {
+    const updatedFilters = { ...filters };
+    
+    switch (filterType) {
+      case 'search':
+        updatedFilters.search = '';
+        setSearchValue('');
+        break;
+      case 'status':
+        updatedFilters.status = updatedFilters.status.filter(s => s !== value);
+        break;
+      case 'priority':
+        updatedFilters.priority = updatedFilters.priority.filter(p => p !== value);
+        break;
+      case 'dateRange':
+        updatedFilters.dateRange = {};
+        break;
+      case 'salaryRange':
+        updatedFilters.salaryRange = {};
+        break;
+      case 'location':
+        updatedFilters.location = updatedFilters.location.filter(l => l !== value);
+        break;
+      case 'hasInterviews':
+        updatedFilters.hasInterviews = undefined;
+        break;
+    }
+    
+    updateFilters(updatedFilters);
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    const defaultFilters = getDefaultFilters();
+    updateFilters(defaultFilters);
+    setSearchValue('');
+  };
+
   const [applications, setApplications] = useState<Application[]>(
     [
     {
@@ -41,6 +100,9 @@ export default function ApplicationsPage() {
       status: 'Applied',
       priority: 'High',
       applicationDate: '2025-03-01',
+      salary: 120000,
+      createdAt: '2025-03-01T00:00:00Z',
+      updatedAt: '2025-03-01T00:00:00Z',
     },
     {
       id: 2,
@@ -50,6 +112,10 @@ export default function ApplicationsPage() {
       status: 'Interview',
       priority: 'Medium',
       applicationDate: '2025-02-28',
+      salary: 95000,
+      responseDate: '2025-03-02',
+      createdAt: '2025-02-28T00:00:00Z',
+      updatedAt: '2025-03-02T00:00:00Z',
     },
     {
       id: 3,
@@ -59,6 +125,11 @@ export default function ApplicationsPage() {
       status: 'Offer',
       priority: 'High',
       applicationDate: '2025-02-25',
+      salary: 140000,
+      responseDate: '2025-02-27',
+      offerDate: '2025-03-01',
+      createdAt: '2025-02-25T00:00:00Z',
+      updatedAt: '2025-03-01T00:00:00Z',
     },
     {
       id: 4,
@@ -68,12 +139,23 @@ export default function ApplicationsPage() {
       status: 'Rejected',
       priority: 'Low',
       applicationDate: '2025-02-20',
+      salary: 85000,
+      responseDate: '2025-02-22',
+      createdAt: '2025-02-20T00:00:00Z',
+      updatedAt: '2025-02-22T00:00:00Z',
     },
     ]
   );
 
+  // Filtered and sorted applications with performance optimization
+  const filteredAndSortedApplications = useMemo(() => {
+    const filtered = filterApplications(applications, { ...filters, search: debouncedSearch });
+    return sortApplications(filtered, sortOption);
+  }, [applications, filters, debouncedSearch, sortOption]);
+
   function handleAddApplication() {
     if (!newCompany.trim() || !newPosition.trim()) return;
+    const now = new Date().toISOString();
     setApplications((prev) => [
       {
         id: (prev.at(-1)?.id || 0) + 1,
@@ -82,7 +164,9 @@ export default function ApplicationsPage() {
         location: newLocation.trim(),
         status: newStatus,
         priority: newPriority,
-        applicationDate: new Date().toISOString(),
+        applicationDate: now,
+        createdAt: now,
+        updatedAt: now,
       },
       ...prev,
     ]);
@@ -175,54 +259,105 @@ export default function ApplicationsPage() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-neutral-500" />
-          <Input
-            placeholder="Search by company or position..."
-            className="pl-8"
+      <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
+        <SearchInput
+          ref={searchInputRef}
+          value={searchValue}
+          onChange={handleSearchChange}
+          placeholder="Search by company, position, or location..."
+          className="flex-1"
+        />
+        <div className="flex items-center space-x-2">
+          <SortDropdown
+            currentSort={sortOption}
+            onSortChange={setSortOption}
+          />
+          <FilterSidebar
+            filters={filters}
+            onFiltersChange={updateFilters}
+            isOpen={isFilterSidebarOpen}
+            onToggle={() => setIsFilterSidebarOpen(!isFilterSidebarOpen)}
           />
         </div>
-        <Button variant="outline">Filter</Button>
       </div>
 
+      {hasActiveFilters(filters) && (
+        <FilterChips
+          filters={filters}
+          onRemoveFilter={removeFilter}
+          onClearAll={clearAllFilters}
+        />
+      )}
+
       {viewMode === 'list' ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {applications.map((app) => (
-            <Link key={app.id} href={`/applications/${app.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">{app.companyName}</CardTitle>
-                      <p className="text-sm font-medium text-neutral-700">
-                        {app.position}
-                      </p>
-                    </div>
-                    <Badge className={getPriorityColor(app.priority)} variant="secondary">
-                      {app.priority}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center text-sm text-neutral-500">
-                    <MapPin className="mr-1 h-3 w-3" />
-                    {app.location}
-                  </div>
-                  <div className="flex items-center text-sm text-neutral-500">
-                    <Calendar className="mr-1 h-3 w-3" />
-                    Applied: {new Date(app.applicationDate).toLocaleDateString()}
-                  </div>
-                  <div className="mt-4">
-                    <Badge className={getStatusColor(app.status)} variant="secondary">
-                      {app.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Company</TableHead>
+                <TableHead>Position</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Application Date</TableHead>
+                <TableHead>Salary</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAndSortedApplications.map((app) => (
+                <TableRow key={app.id} className="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                  <TableCell>
+                    <Link href={`/applications/${app.id}`} className="block">
+                      <div className="font-medium">{app.companyName}</div>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/applications/${app.id}`} className="block">
+                      <div className="text-neutral-700 dark:text-neutral-300">{app.position}</div>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/applications/${app.id}`} className="block">
+                      <div className="flex items-center text-neutral-500">
+                        <MapPin className="mr-1 h-3 w-3" />
+                        {app.location}
+                      </div>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/applications/${app.id}`} className="block">
+                      <Badge className={getStatusColor(app.status)} variant="secondary">
+                        {app.status}
+                      </Badge>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/applications/${app.id}`} className="block">
+                      <Badge className={getPriorityColor(app.priority)} variant="secondary">
+                        {app.priority}
+                      </Badge>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/applications/${app.id}`} className="block">
+                      <div className="flex items-center text-neutral-500">
+                        <Calendar className="mr-1 h-3 w-3" />
+                        {new Date(app.applicationDate).toLocaleDateString()}
+                      </div>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/applications/${app.id}`} className="block">
+                      <div className="text-neutral-600">
+                        {app.salary ? `$${app.salary.toLocaleString()}` : 'N/A'}
+                      </div>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-4">
           {(['Applied','Interview','Offer','Rejected'] as const).map((col) => (
@@ -231,7 +366,7 @@ export default function ApplicationsPage() {
                 <CardTitle className="text-sm">{col}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {applications.filter((a) => a.status === col).map((app) => (
+                {filteredAndSortedApplications.filter((a) => a.status === col).map((app) => (
                   <Link key={app.id} href={`/applications/${app.id}`}>
                     <div className="border rounded-md p-3 hover:bg-neutral-50 dark:hover:bg-neutral-900 cursor-pointer">
                       <div className="flex items-center justify-between">
