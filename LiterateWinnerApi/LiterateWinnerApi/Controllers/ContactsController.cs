@@ -1,11 +1,9 @@
 using JobApplicationTrackerApi.DTO.Contacts;
-using JobApplicationTrackerApi.Persistence.DefaultContext;
-using JobApplicationTrackerApi.Persistence.DefaultContext.Entity;
+using JobApplicationTrackerApi.Services.ContactsService;
 using JobApplicationTrackerApi.Services.IdentityService;
 using JobApplicationTrackerApi.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace JobApplicationTrackerApi.Controllers;
 
@@ -16,12 +14,12 @@ namespace JobApplicationTrackerApi.Controllers;
 [Route("api/[controller]")]
 [Authorize]
 public class ContactsController(
-    DefaultContext context,
+    IContactsService contactsService,
     IIdentityService identityService,
     ILogger<ContactsController> logger
 ) : ControllerBase
 {
-    private readonly DefaultContext _context = context ?? throw new ArgumentNullException(nameof(context));
+    private readonly IContactsService _contactsService = contactsService ?? throw new ArgumentNullException(nameof(contactsService));
     private readonly IIdentityService _identityService = identityService ?? throw new ArgumentNullException(nameof(identityService));
     private readonly ILogger<ContactsController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -44,38 +42,13 @@ public class ContactsController(
                 return Unauthorized(ApiResponse<object>.Failure("User not authenticated"));
             }
 
-            // Verify the application belongs to the user
-            var applicationExists = await _context.Applications
-                .AnyAsync(a => a.Id == applicationId && a.UserId == userId && a.Status == Enum.CommonStatus.Active);
-
-            if (!applicationExists)
-            {
-                return NotFound(ApiResponse<object>.Failure("Application not found"));
-            }
-
-            var contacts = await _context.Contacts
-                .Where(c => c.ApplicationId == applicationId && c.Status == Enum.CommonStatus.Active)
-                .OrderBy(c => c.IsPrimaryContact ? 0 : 1)
-                .ThenBy(c => c.Name)
-                .Select(c => new ContactResponseDto
-                {
-                    Id = c.Id,
-                    ApplicationId = c.ApplicationId,
-                    Name = c.Name,
-                    Position = c.Position,
-                    Email = c.Email,
-                    Phone = c.Phone,
-                    LinkedIn = c.LinkedIn,
-                    Notes = c.Notes,
-                    IsPrimaryContact = c.IsPrimaryContact,
-                    CreatedUtc = c.CreatedUtc,
-                    CreatedBy = c.CreatedBy,
-                    UpdatedUtc = c.UpdatedUtc,
-                    UpdatedBy = c.UpdatedBy
-                })
-                .ToListAsync();
-
+            var contacts = await _contactsService.GetContactsByApplicationAsync(applicationId, userId);
             return Ok(ApiResponse<List<ContactResponseDto>>.Success(contacts, "Contacts retrieved successfully"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Application not found or access denied for application {ApplicationId}", applicationId);
+            return NotFound(ApiResponse<object>.Failure(ex.Message));
         }
         catch (Exception ex)
         {
@@ -103,27 +76,7 @@ public class ContactsController(
                 return Unauthorized(ApiResponse<object>.Failure("User not authenticated"));
             }
 
-            var contact = await _context.Contacts
-                .Include(c => c.Application)
-                .Where(c => c.Id == id && c.Status == Enum.CommonStatus.Active && c.Application.UserId == userId)
-                .Select(c => new ContactResponseDto
-                {
-                    Id = c.Id,
-                    ApplicationId = c.ApplicationId,
-                    Name = c.Name,
-                    Position = c.Position,
-                    Email = c.Email,
-                    Phone = c.Phone,
-                    LinkedIn = c.LinkedIn,
-                    Notes = c.Notes,
-                    IsPrimaryContact = c.IsPrimaryContact,
-                    CreatedUtc = c.CreatedUtc,
-                    CreatedBy = c.CreatedBy,
-                    UpdatedUtc = c.UpdatedUtc,
-                    UpdatedBy = c.UpdatedBy
-                })
-                .FirstOrDefaultAsync();
-
+            var contact = await _contactsService.GetContactByIdAsync(id, userId);
             if (contact == null)
             {
                 return NotFound(ApiResponse<object>.Failure("Contact not found"));
@@ -158,65 +111,14 @@ public class ContactsController(
                 return Unauthorized(ApiResponse<object>.Failure("User not authenticated"));
             }
 
-            // Verify the application belongs to the user
-            var application = await _context.Applications
-                .FirstOrDefaultAsync(a => a.Id == createContactDto.ApplicationId && a.UserId == userId && a.Status == Enum.CommonStatus.Active);
-
-            if (application == null)
-            {
-                return NotFound(ApiResponse<object>.Failure("Application not found"));
-            }
-
-            // If this contact is marked as primary, unmark other primary contacts for this application
-            if (createContactDto.IsPrimaryContact)
-            {
-                var existingPrimaryContacts = await _context.Contacts
-                    .Where(c => c.ApplicationId == createContactDto.ApplicationId && c.IsPrimaryContact && c.Status == Enum.CommonStatus.Active)
-                    .ToListAsync();
-
-                foreach (var existingContact in existingPrimaryContacts)
-                {
-                    existingContact.IsPrimaryContact = false;
-                    existingContact.UpdatedBy = userId;
-                }
-            }
-
-            var contact = new Contact
-            {
-                ApplicationId = createContactDto.ApplicationId,
-                Name = createContactDto.Name,
-                Position = createContactDto.Position,
-                Email = createContactDto.Email,
-                Phone = createContactDto.Phone,
-                LinkedIn = createContactDto.LinkedIn,
-                Notes = createContactDto.Notes,
-                IsPrimaryContact = createContactDto.IsPrimaryContact,
-                CreatedBy = userId,
-                Status = Enum.CommonStatus.Active
-            };
-
-            _context.Contacts.Add(contact);
-            await _context.SaveChangesAsync();
-
-            var responseDto = new ContactResponseDto
-            {
-                Id = contact.Id,
-                ApplicationId = contact.ApplicationId,
-                Name = contact.Name,
-                Position = contact.Position,
-                Email = contact.Email,
-                Phone = contact.Phone,
-                LinkedIn = contact.LinkedIn,
-                Notes = contact.Notes,
-                IsPrimaryContact = contact.IsPrimaryContact,
-                CreatedUtc = contact.CreatedUtc,
-                CreatedBy = contact.CreatedBy,
-                UpdatedUtc = contact.UpdatedUtc,
-                UpdatedBy = contact.UpdatedBy
-            };
-
+            var contact = await _contactsService.CreateContactAsync(createContactDto, userId);
             return CreatedAtAction(nameof(GetContact), new { id = contact.Id }, 
-                ApiResponse<ContactResponseDto>.Success(responseDto, "Contact created successfully"));
+                ApiResponse<ContactResponseDto>.Success(contact, "Contact created successfully"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Application not found or access denied for application {ApplicationId}", createContactDto.ApplicationId);
+            return NotFound(ApiResponse<object>.Failure(ex.Message));
         }
         catch (Exception ex)
         {
@@ -246,73 +148,13 @@ public class ContactsController(
                 return Unauthorized(ApiResponse<object>.Failure("User not authenticated"));
             }
 
-            var contact = await _context.Contacts
-                .Include(c => c.Application)
-                .FirstOrDefaultAsync(c => c.Id == id && c.Status == Enum.CommonStatus.Active && c.Application.UserId == userId);
-
-            if (contact == null)
-            {
-                return NotFound(ApiResponse<object>.Failure("Contact not found"));
-            }
-
-            // If this contact is being marked as primary, unmark other primary contacts for this application
-            if (updateContactDto.IsPrimaryContact == true)
-            {
-                var existingPrimaryContacts = await _context.Contacts
-                    .Where(c => c.ApplicationId == contact.ApplicationId && c.IsPrimaryContact && c.Id != id && c.Status == Enum.CommonStatus.Active)
-                    .ToListAsync();
-
-                foreach (var existingContact in existingPrimaryContacts)
-                {
-                    existingContact.IsPrimaryContact = false;
-                    existingContact.UpdatedBy = userId;
-                }
-            }
-
-            // Update only provided fields
-            if (!string.IsNullOrEmpty(updateContactDto.Name))
-                contact.Name = updateContactDto.Name;
-
-            if (updateContactDto.Position != null)
-                contact.Position = updateContactDto.Position;
-
-            if (updateContactDto.Email != null)
-                contact.Email = updateContactDto.Email;
-
-            if (updateContactDto.Phone != null)
-                contact.Phone = updateContactDto.Phone;
-
-            if (updateContactDto.LinkedIn != null)
-                contact.LinkedIn = updateContactDto.LinkedIn;
-
-            if (updateContactDto.Notes != null)
-                contact.Notes = updateContactDto.Notes;
-
-            if (updateContactDto.IsPrimaryContact.HasValue)
-                contact.IsPrimaryContact = updateContactDto.IsPrimaryContact.Value;
-
-            contact.UpdatedBy = userId;
-
-            await _context.SaveChangesAsync();
-
-            var responseDto = new ContactResponseDto
-            {
-                Id = contact.Id,
-                ApplicationId = contact.ApplicationId,
-                Name = contact.Name,
-                Position = contact.Position,
-                Email = contact.Email,
-                Phone = contact.Phone,
-                LinkedIn = contact.LinkedIn,
-                Notes = contact.Notes,
-                IsPrimaryContact = contact.IsPrimaryContact,
-                CreatedUtc = contact.CreatedUtc,
-                CreatedBy = contact.CreatedBy,
-                UpdatedUtc = contact.UpdatedUtc,
-                UpdatedBy = contact.UpdatedBy
-            };
-
-            return Ok(ApiResponse<ContactResponseDto>.Success(responseDto, "Contact updated successfully"));
+            var contact = await _contactsService.UpdateContactAsync(id, updateContactDto, userId);
+            return Ok(ApiResponse<ContactResponseDto>.Success(contact, "Contact updated successfully"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Contact not found or access denied for contact {ContactId}", id);
+            return NotFound(ApiResponse<object>.Failure(ex.Message));
         }
         catch (Exception ex)
         {
@@ -340,22 +182,18 @@ public class ContactsController(
                 return Unauthorized(ApiResponse<object>.Failure("User not authenticated"));
             }
 
-            var contact = await _context.Contacts
-                .Include(c => c.Application)
-                .FirstOrDefaultAsync(c => c.Id == id && c.Status == Enum.CommonStatus.Active && c.Application.UserId == userId);
-
-            if (contact == null)
+            var result = await _contactsService.DeleteContactAsync(id, userId);
+            if (!result)
             {
                 return NotFound(ApiResponse<object>.Failure("Contact not found"));
             }
 
-            // Soft delete
-            contact.Status = Enum.CommonStatus.Delete;
-            contact.UpdatedBy = userId;
-
-            await _context.SaveChangesAsync();
-
             return Ok(ApiResponse<object>.Success(new object(), "Contact deleted successfully"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Contact not found or access denied for contact {ContactId}", id);
+            return NotFound(ApiResponse<object>.Failure(ex.Message));
         }
         catch (Exception ex)
         {
@@ -383,33 +221,18 @@ public class ContactsController(
                 return Unauthorized(ApiResponse<object>.Failure("User not authenticated"));
             }
 
-            var contact = await _context.Contacts
-                .Include(c => c.Application)
-                .FirstOrDefaultAsync(c => c.Id == id && c.Status == Enum.CommonStatus.Active && c.Application.UserId == userId);
-
-            if (contact == null)
+            var result = await _contactsService.SetPrimaryContactAsync(id, userId);
+            if (!result)
             {
                 return NotFound(ApiResponse<object>.Failure("Contact not found"));
             }
 
-            // Unmark all other primary contacts for this application
-            var existingPrimaryContacts = await _context.Contacts
-                .Where(c => c.ApplicationId == contact.ApplicationId && c.IsPrimaryContact && c.Id != id && c.Status == Enum.CommonStatus.Active)
-                .ToListAsync();
-
-            foreach (var existingContact in existingPrimaryContacts)
-            {
-                existingContact.IsPrimaryContact = false;
-                existingContact.UpdatedBy = userId;
-            }
-
-            // Set this contact as primary
-            contact.IsPrimaryContact = true;
-            contact.UpdatedBy = userId;
-
-            await _context.SaveChangesAsync();
-
             return Ok(ApiResponse<object>.Success(new object(), "Contact set as primary successfully"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Contact not found or access denied for contact {ContactId}", id);
+            return NotFound(ApiResponse<object>.Failure(ex.Message));
         }
         catch (Exception ex)
         {
