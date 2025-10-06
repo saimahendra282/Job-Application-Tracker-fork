@@ -21,9 +21,29 @@ const priorityOptions: Priority[] = ['High', 'Medium', 'Low'];
 
 export function FilterSidebar({ filters, onFiltersChange, isOpen, onToggle }: FilterSidebarProps) {
   const [newLocation, setNewLocation] = useState('');
+  const [dateError, setDateError] = useState('');
+  const [salaryError, setSalaryError] = useState('');
 
   const updateFilters = (updates: Partial<SearchFilters>) => {
     onFiltersChange({ ...filters, ...updates });
+  };
+
+  const validateDateRange = (from?: string, to?: string) => {
+    if (from && to && new Date(from) > new Date(to)) {
+      setDateError('Start date must be before or equal to end date');
+      return false;
+    }
+    setDateError('');
+    return true;
+  };
+
+  const validateSalaryRange = (min?: number, max?: number) => {
+    if (min !== undefined && max !== undefined && min > max) {
+      setSalaryError('Minimum salary must be less than or equal to maximum salary');
+      return false;
+    }
+    setSalaryError('');
+    return true;
   };
 
   const toggleStatus = (status: ApplicationStatus) => {
@@ -115,19 +135,32 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onToggle }: Fi
             type="date"
             placeholder="From"
             value={filters.dateRange.from || ''}
-            onChange={(e) => updateFilters({
-              dateRange: { ...filters.dateRange, from: e.target.value }
-            })}
+            onChange={(e) => {
+              const from = e.target.value;
+              validateDateRange(from, filters.dateRange.to);
+              updateFilters({
+                dateRange: { ...filters.dateRange, from }
+              });
+            }}
+            aria-label="Filter from date"
           />
           <Input
             type="date"
             placeholder="To"
             value={filters.dateRange.to || ''}
-            onChange={(e) => updateFilters({
-              dateRange: { ...filters.dateRange, to: e.target.value }
-            })}
+            onChange={(e) => {
+              const to = e.target.value;
+              validateDateRange(filters.dateRange.from, to);
+              updateFilters({
+                dateRange: { ...filters.dateRange, to }
+              });
+            }}
+            aria-label="Filter to date"
           />
         </div>
+        {dateError && (
+          <p className="text-sm text-red-500 mt-1" role="alert">{dateError}</p>
+        )}
       </div>
 
       {/* Salary Range Filter */}
@@ -137,26 +170,41 @@ export function FilterSidebar({ filters, onFiltersChange, isOpen, onToggle }: Fi
           <Input
             type="number"
             placeholder="Min ($)"
+            min="0"
             value={filters.salaryRange.min || ''}
-            onChange={(e) => updateFilters({
-              salaryRange: { 
-                ...filters.salaryRange, 
-                min: e.target.value ? parseInt(e.target.value) : undefined 
-              }
-            })}
+            onChange={(e) => {
+              const min = e.target.value ? parseInt(e.target.value) : undefined;
+              validateSalaryRange(min, filters.salaryRange.max);
+              updateFilters({
+                salaryRange: { 
+                  ...filters.salaryRange, 
+                  min 
+                }
+              });
+            }}
+            aria-label="Minimum salary"
           />
           <Input
             type="number"
             placeholder="Max ($)"
+            min="0"
             value={filters.salaryRange.max || ''}
-            onChange={(e) => updateFilters({
-              salaryRange: { 
-                ...filters.salaryRange, 
-                max: e.target.value ? parseInt(e.target.value) : undefined 
-              }
-            })}
+            onChange={(e) => {
+              const max = e.target.value ? parseInt(e.target.value) : undefined;
+              validateSalaryRange(filters.salaryRange.min, max);
+              updateFilters({
+                salaryRange: { 
+                  ...filters.salaryRange, 
+                  max 
+                }
+              });
+            }}
+            aria-label="Maximum salary"
           />
         </div>
+        {salaryError && (
+          <p className="text-sm text-red-500 mt-1" role="alert">{salaryError}</p>
+        )}
       </div>
 
       {/* Location Filter */}

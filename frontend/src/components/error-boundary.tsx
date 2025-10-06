@@ -83,4 +83,33 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
+// Form-specific error boundary with smaller footprint
+export function FormErrorBoundary({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary
+      fallback={({ error, resetError }) => (
+        <div className="p-4 border border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800 rounded-md">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+            <AlertTriangle className="h-4 w-4" />
+            <p className="text-sm font-medium">Form error occurred</p>
+          </div>
+          <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+            {error?.message || 'Please refresh the page and try again.'}
+          </p>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={resetError}
+            className="mt-2"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 export default ErrorBoundary;

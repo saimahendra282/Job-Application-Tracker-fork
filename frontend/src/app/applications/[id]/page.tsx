@@ -3,20 +3,24 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { ArrowLeft, Calendar, MapPin, DollarSign, ExternalLink, Bold, Italic, Underline, List, Users2 } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, DollarSign, ExternalLink, Users2 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Note, NoteType, Application, Interview, ApplicationStatus } from '@/lib/types';
-import { toast } from 'sonner';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { NoteForm } from '@/components/forms/note-form';
+import { InterviewForm } from '@/components/forms/interview-form';
+import { ContactForm } from '@/components/forms/contact-form';
+import { useCreateNote, useUpdateNote, useDeleteNote, useCreateInterview } from '@/lib/mutations';
+import { FormErrorBoundary } from '@/components/error-boundary';
+import type { NoteFormData, InterviewFormData, ContactFormData } from '@/lib/validation';
 
-export default function ApplicationDetailPage({ params }: { params: { id: string } }) {
+function ApplicationDetail({ id }: { id: string }) {
   // Mock data - will be replaced with real API call
   const application: Application = {
-    id: Number(params.id) || 0,
+    id: Number(id) || 0,
     companyName: 'Tech Company Inc.',
     position: 'Software Engineer',
     location: 'San Francisco, CA',
@@ -37,7 +41,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
   const interviews: Interview[] = [
     {
       id: 1,
-      applicationId: Number(params.id) || 0,
+      applicationId: Number(id) || 0,
       interviewDate: '2025-03-10T14:00:00',
       interviewType: 'Technical',
       interviewerName: 'John Doe',
@@ -51,7 +55,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
   const initialNotes: Note[] = [
     {
       id: 1,
-      applicationId: Number(params.id) || 0,
+      applicationId: Number(id) || 0,
       title: 'Company Research',
       content:
         'Tech Company Inc. is a fast-growing startup focused on <b>AI solutions</b> targeting healthcare. Market size ~ $20B. Competitors: A, B, C. Recent funding: Series B.',
@@ -65,9 +69,13 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
   const [noteFilter, setNoteFilter] = useState<NoteType | 'All'>('All');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
-  const [noteTitle, setNoteTitle] = useState('');
-  const [noteType, setNoteType] = useState<NoteType>('Research');
-  const editorRef = useRef<HTMLDivElement | null>(null);
+  const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
+  const createNoteMutation = useCreateNote();
+  const updateNoteMutation = useUpdateNote();
+  useDeleteNote(); // For future use
+  const createInterviewMutation = useCreateInterview();
 
   const noteTypes: NoteType[] = useMemo(
     () => ['Research', 'Interview', 'Follow-up', 'General', 'Offer'],
@@ -79,83 +87,58 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
     [notes, noteFilter]
   );
 
-  function openNewNote() {
+  function handleSaveNote(data: NoteFormData & { content: string }) {
+    if (editingNote) {
+      // Update existing note
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === editingNote.id
+            ? { ...n, ...data, updatedAt: new Date().toISOString() }
+            : n
+        )
+      );
+      // Uncomment for API: updateNoteMutation.mutate({ id: editingNote.id, data, applicationId: Number(params.id) });
+    } else {
+      // Create new note
+      const newNote: Note = {
+        id: (notes.at(-1)?.id || 0) + 1,
+        applicationId: Number(id) || 0,
+        title: data.title,
+        content: data.content,
+        noteType: data.noteType,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setNotes((prev) => [newNote, ...prev]);
+      // Uncomment for API: createNoteMutation.mutate(data);
+    }
+
+    setIsNoteModalOpen(false);
     setEditingNote(null);
-    setNoteTitle('');
-    setNoteType('Research');
-    setIsNoteModalOpen(true);
-    requestAnimationFrame(() => {
-      if (editorRef.current) editorRef.current.innerHTML = '';
-    });
-  }
-
-  function openEditNote(note: Note) {
-    setEditingNote(note);
-    setNoteTitle(note.title);
-    setNoteType(note.noteType);
-    setIsNoteModalOpen(true);
-    requestAnimationFrame(() => {
-      if (editorRef.current) editorRef.current.innerHTML = note.content;
-    });
-  }
-
-  function execFormatting(command: string) {
-    document.execCommand(command);
-  }
-
-  function handleSaveNote() {
-    const content = editorRef.current?.innerHTML?.trim() || '';
-    if (!noteTitle.trim() || !content.trim()) {
-      toast.error('Please fill in both title and content');
-      return;
-    }
-
-    try {
-      if (editingNote) {
-        setNotes((prev) =>
-          prev.map((n) =>
-            n.id === editingNote.id
-              ? { ...n, title: noteTitle.trim(), noteType, content, updatedAt: new Date().toISOString() }
-              : n
-          )
-        );
-        toast.success('Note updated successfully');
-      } else {
-        const newNote: Note = {
-          id: (notes.at(-1)?.id || 0) + 1,
-          applicationId: Number(params.id) || 0,
-          title: noteTitle.trim(),
-          content,
-          noteType,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        setNotes((prev) => [newNote, ...prev]);
-        toast.success('Note added successfully');
-      }
-
-      setIsNoteModalOpen(false);
-      setEditingNote(null);
-      setNoteTitle('');
-      if (editorRef.current) editorRef.current.innerHTML = '';
-    } catch (error) {
-      console.error('Error saving note:', error);
-      toast.error('Failed to save note');
-    }
   }
 
   function handleDeleteNote(id: number) {
     const ok = window.confirm('Delete this note? This cannot be undone.');
     if (!ok) return;
     
-    try {
-      setNotes((prev) => prev.filter((n) => n.id !== id));
-      toast.success('Note deleted successfully');
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      toast.error('Failed to delete note');
-    }
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    // Uncomment for API: deleteNoteMutation.mutate({ id, applicationId: Number(params.id) });
   }
+
+  function handleCreateInterview(data: InterviewFormData) {
+    // In production, call API
+    console.log('Creating interview:', data);
+    setIsInterviewModalOpen(false);
+    // Uncomment for API: createInterviewMutation.mutate(data, { onSuccess: () => setIsInterviewModalOpen(false) });
+  }
+
+  function handleCreateContact(data: ContactFormData) {
+    // In production, call API
+    console.log('Creating contact:', data);
+    setIsContactModalOpen(false);
+  }
+
+  const applicationId = Number(id) || 0;
 
   const getStatusColor = (status: ApplicationStatus) => {
     const colors: Record<ApplicationStatus, string> = {
@@ -271,7 +254,24 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
 
         <TabsContent value="interviews" className="space-y-4">
           <div className="flex justify-end">
-            <Button>Schedule Interview</Button>
+            <Dialog open={isInterviewModalOpen} onOpenChange={setIsInterviewModalOpen}>
+              <DialogTrigger asChild>
+                <Button>Schedule Interview</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Schedule Interview</DialogTitle>
+                </DialogHeader>
+                <FormErrorBoundary>
+                  <InterviewForm
+                    applicationId={applicationId}
+                    onSubmit={handleCreateInterview}
+                    onCancel={() => setIsInterviewModalOpen(false)}
+                    isLoading={createInterviewMutation.isPending}
+                  />
+                </FormErrorBoundary>
+              </DialogContent>
+            </Dialog>
           </div>
           {interviews.length > 0 ? (
             interviews.map((interview) => (
@@ -330,57 +330,21 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
             </div>
             <Dialog open={isNoteModalOpen} onOpenChange={setIsNoteModalOpen}>
               <DialogTrigger asChild>
-                <Button onClick={openNewNote}>Add Note</Button>
+                <Button onClick={() => { setEditingNote(null); setIsNoteModalOpen(true); }}>Add Note</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>{editingNote ? 'Edit Note' : 'Add Note'}</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-3">
-                  <Input
-                    placeholder="Title"
-                    value={noteTitle}
-                    onChange={(e) => setNoteTitle(e.target.value)}
+                <FormErrorBoundary>
+                  <NoteForm
+                    applicationId={applicationId}
+                    note={editingNote || undefined}
+                    onSubmit={handleSaveNote}
+                    onCancel={() => setIsNoteModalOpen(false)}
+                    isLoading={createNoteMutation.isPending || updateNoteMutation.isPending}
                   />
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-neutral-600">Category</span>
-                    <Select value={noteType} onValueChange={(v) => setNoteType(v as NoteType)}>
-                      <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {noteTypes.map((t) => (
-                          <SelectItem key={t} value={t}>{t}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="border rounded-md">
-                    <div className="flex items-center gap-1 border-b p-2">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => execFormatting('bold')} aria-label="Bold">
-                        <Bold className="h-4 w-4" />
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => execFormatting('italic')} aria-label="Italic">
-                        <Italic className="h-4 w-4" />
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => execFormatting('underline')} aria-label="Underline">
-                        <Underline className="h-4 w-4" />
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => execFormatting('insertUnorderedList')} aria-label="Bulleted list">
-                        <List className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div
-                      ref={editorRef}
-                      contentEditable
-                      className="min-h-[160px] p-3 text-sm outline-none prose prose-sm max-w-none dark:prose-invert"
-                      aria-label="Note content editor"
-                      suppressContentEditableWarning
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="ghost" onClick={() => setIsNoteModalOpen(false)}>Cancel</Button>
-                  <Button onClick={handleSaveNote}>{editingNote ? 'Save Changes' : 'Add Note'}</Button>
-                </DialogFooter>
+                </FormErrorBoundary>
               </DialogContent>
             </Dialog>
           </div>
@@ -392,7 +356,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
                     <CardTitle className="text-base font-semibold">{note.title}</CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{note.noteType}</Badge>
-                      <Button size="sm" variant="ghost" onClick={() => openEditNote(note)}>Edit</Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditingNote(note); setIsNoteModalOpen(true); }}>Edit</Button>
                       <Button size="sm" variant="destructive" onClick={() => handleDeleteNote(note.id)}>Delete</Button>
                     </div>
                   </div>
@@ -472,7 +436,24 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
             <div className="flex items-center gap-2 text-neutral-600"><Users2 className="h-4 w-4" />
               <span className="text-sm">Recruiter / Hiring Contacts</span>
             </div>
-            <Button>Add Contact</Button>
+            <Dialog open={isContactModalOpen} onOpenChange={setIsContactModalOpen}>
+              <DialogTrigger asChild>
+                <Button>Add Contact</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add Contact</DialogTitle>
+                </DialogHeader>
+                <FormErrorBoundary>
+                  <ContactForm
+                    applicationId={applicationId}
+                    onSubmit={handleCreateContact}
+                    onCancel={() => setIsContactModalOpen(false)}
+                    isLoading={false}
+                  />
+                </FormErrorBoundary>
+              </DialogContent>
+            </Dialog>
           </div>
           <Card>
             <CardContent className="py-8 text-center text-neutral-500">
@@ -483,4 +464,9 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
       </Tabs>
     </div>
   );
+}
+
+export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <ApplicationDetail id={id} />;
 }
