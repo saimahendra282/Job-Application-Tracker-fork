@@ -14,7 +14,6 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 *.lnk
-.vscode
 
 # macOS
 .DS_Store

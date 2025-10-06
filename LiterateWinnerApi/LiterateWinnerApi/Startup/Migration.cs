@@ -16,7 +16,7 @@ public static class Migration
         }
 
         // Apply migrations for Identity context
-        app.MigrateDbContext<IdentityContext>((context, services) =>
+        app.MigrateDbContext<IdentityContext>((_, services) =>
         {
             var logger = services.GetRequiredService<ILogger<IdentityContext>>();
             var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
