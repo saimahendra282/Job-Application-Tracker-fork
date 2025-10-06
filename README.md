@@ -126,6 +126,54 @@ The Job Application Tracker is designed to streamline the job search process by 
 
    The frontend will be available at `http://localhost:3000`
 
+## 🧪 Testing
+
+This project includes comprehensive testing to ensure code quality and reliability.
+
+### Backend Testing (.NET)
+[![Backend Coverage](https://img.shields.io/badge/Coverage-70%2B%25-brightgreen?style=for-the-badge)](https://github.com/priyankeshh/Job-Application-Tracker)
+
+- **Unit Tests**: Service layer testing with xUnit and Moq
+- **Integration Tests**: API endpoint testing with TestServer
+- **Performance Tests**: Benchmarking with BenchmarkDotNet
+- **Security Tests**: Authentication and token validation
+
+**Run Backend Tests:**
+```bash
+cd LiterateWinnerApi
+dotnet test --configuration Release
+```
+
+**Run Performance Benchmarks:**
+```bash
+cd LiterateWinnerApi
+dotnet run --project JobApplicationTrackerApi.Tests --configuration Release
+```
+
+### Frontend Testing (Next.js)
+[![Frontend Coverage](https://img.shields.io/badge/Coverage-71.8%25-brightgreen?style=for-the-badge)](https://github.com/priyankeshh/Job-Application-Tracker)
+
+- **Unit Tests**: Component testing with Vitest and React Testing Library
+- **Integration Tests**: User interaction testing
+- **Coverage**: V8 coverage provider
+
+**Run Frontend Tests:**
+```bash
+cd frontend
+npm run test:run
+```
+
+**Run with Coverage:**
+```bash
+cd frontend
+npm run test:coverage
+```
+
+### CI/CD
+- **GitHub Actions**: Automated testing on every push and PR
+- **Coverage Thresholds**: Minimum 70% coverage required
+- **Multi-stage Pipeline**: Backend, frontend, and Docker build validation
+
 ## 📁 Project Structure
 
 ```
