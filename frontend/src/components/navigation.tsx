@@ -8,7 +8,9 @@ import {
   LayoutDashboard,
   Briefcase,
   Calendar,
-  BarChart3
+  BarChart3,
+  FileText,
+  Settings
 } from 'lucide-react';
 
 const routes = [
@@ -35,6 +37,18 @@ const routes = [
     icon: BarChart3,
     href: '/analytics',
     color: 'text-orange-700',
+  },
+  {
+    label: 'Templates',
+    icon: FileText,
+    href: '/templates',
+    color: 'text-green-700',
+  },
+  {
+    label: 'Settings',
+    icon: Settings,
+    href: '/settings',
+    color: 'text-gray-700',
   },
 ];
 
