@@ -9,12 +9,14 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Calendar, MapPin, DollarSign, ExternalLink, Bold, Italic, Underline, List, Users2 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
-import type { Note, NoteType } from '@/lib/types';
+import type { Note, NoteType, Application, Interview, ApplicationStatus } from '@/lib/types';
+import { toast } from 'sonner';
+import { formatDate, formatDateTime } from '@/lib/utils';
 
 export default function ApplicationDetailPage({ params }: { params: { id: string } }) {
   // Mock data - will be replaced with real API call
-  const application = {
-    id: params.id,
+  const application: Application = {
+    id: Number(params.id) || 0,
     companyName: 'Tech Company Inc.',
     position: 'Software Engineer',
     location: 'San Francisco, CA',
@@ -28,16 +30,21 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
     responseDate: '2025-03-05',
     jobDescription: 'We are looking for a talented Software Engineer to join our team...',
     requirements: '- 3+ years of experience\n- Proficient in React, Node.js\n- Strong problem-solving skills',
+    createdAt: '2025-03-01T00:00:00Z',
+    updatedAt: '2025-03-01T00:00:00Z',
   };
 
-  const interviews = [
+  const interviews: Interview[] = [
     {
       id: 1,
+      applicationId: Number(params.id) || 0,
       interviewDate: '2025-03-10T14:00:00',
       interviewType: 'Technical',
       interviewerName: 'John Doe',
       location: 'Virtual',
       meetingLink: 'https://zoom.us/j/123456789',
+      reminderSent: false,
+      createdAt: '2025-03-01T00:00:00Z',
     },
   ];
 
@@ -98,49 +105,66 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
 
   function handleSaveNote() {
     const content = editorRef.current?.innerHTML?.trim() || '';
-    if (!noteTitle.trim() || !content.trim()) return;
-
-    if (editingNote) {
-      setNotes((prev) =>
-        prev.map((n) =>
-          n.id === editingNote.id
-            ? { ...n, title: noteTitle.trim(), noteType, content, updatedAt: new Date().toISOString() }
-            : n
-        )
-      );
-    } else {
-      const newNote: Note = {
-        id: (notes.at(-1)?.id || 0) + 1,
-        applicationId: Number(params.id) || 0,
-        title: noteTitle.trim(),
-        content,
-        noteType,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setNotes((prev) => [newNote, ...prev]);
+    if (!noteTitle.trim() || !content.trim()) {
+      toast.error('Please fill in both title and content');
+      return;
     }
 
-    setIsNoteModalOpen(false);
-    setEditingNote(null);
-    setNoteTitle('');
-    if (editorRef.current) editorRef.current.innerHTML = '';
+    try {
+      if (editingNote) {
+        setNotes((prev) =>
+          prev.map((n) =>
+            n.id === editingNote.id
+              ? { ...n, title: noteTitle.trim(), noteType, content, updatedAt: new Date().toISOString() }
+              : n
+          )
+        );
+        toast.success('Note updated successfully');
+      } else {
+        const newNote: Note = {
+          id: (notes.at(-1)?.id || 0) + 1,
+          applicationId: Number(params.id) || 0,
+          title: noteTitle.trim(),
+          content,
+          noteType,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setNotes((prev) => [newNote, ...prev]);
+        toast.success('Note added successfully');
+      }
+
+      setIsNoteModalOpen(false);
+      setEditingNote(null);
+      setNoteTitle('');
+      if (editorRef.current) editorRef.current.innerHTML = '';
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast.error('Failed to save note');
+    }
   }
 
   function handleDeleteNote(id: number) {
     const ok = window.confirm('Delete this note? This cannot be undone.');
     if (!ok) return;
-    setNotes((prev) => prev.filter((n) => n.id !== id));
+    
+    try {
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+      toast.success('Note deleted successfully');
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      toast.error('Failed to delete note');
+    }
   }
 
-  const getStatusColor = (status: string) => {
-    const colors = {
+  const getStatusColor = (status: ApplicationStatus) => {
+    const colors: Record<ApplicationStatus, string> = {
       Applied: 'bg-blue-100 text-blue-800',
       Interview: 'bg-yellow-100 text-yellow-800',
       Offer: 'bg-green-100 text-green-800',
       Rejected: 'bg-red-100 text-red-800',
     };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -182,7 +206,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
-              {new Date(application.applicationDate).toLocaleDateString()}
+              {formatDate(application.applicationDate)}
             </div>
           </CardContent>
         </Card>
@@ -258,7 +282,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
                 <CardContent className="space-y-2">
                   <div className="flex items-center text-sm">
                     <Calendar className="mr-2 h-4 w-4 text-neutral-500" />
-                    {new Date(interview.interviewDate).toLocaleString()}
+                    {formatDateTime(interview.interviewDate)}
                   </div>
                   <div className="flex items-center text-sm">
                     <MapPin className="mr-2 h-4 w-4 text-neutral-500" />
@@ -376,8 +400,8 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
                 <CardContent>
                   <div className="text-sm text-neutral-700 prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: note.content }} />
                   <p className="mt-2 text-xs text-neutral-500">
-                    Created {new Date(note.createdAt).toLocaleString()}
-                    {note.updatedAt && ` • Updated ${new Date(note.updatedAt).toLocaleString()}`}
+                    Created {formatDateTime(note.createdAt)}
+                    {note.updatedAt && ` • Updated ${formatDateTime(note.updatedAt)}`}
                   </p>
                 </CardContent>
               </Card>
@@ -412,7 +436,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-neutral-600">{d.size}</p>
-                  <p className="text-xs text-neutral-500">Uploaded {new Date(d.uploadedAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-neutral-500">Uploaded {formatDate(d.uploadedAt)}</p>
                 </CardContent>
               </Card>
             ))}
@@ -433,7 +457,7 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
                     <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
                     <div>
                       <div className="text-sm font-medium">{h.oldStatus} → {h.newStatus}</div>
-                      <div className="text-xs text-neutral-500">{new Date(h.at).toLocaleString()}</div>
+                      <div className="text-xs text-neutral-500">{formatDateTime(h.at)}</div>
                       <div className="text-sm text-neutral-700">{h.notes}</div>
                     </div>
                   </div>
