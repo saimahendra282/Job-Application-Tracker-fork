@@ -129,3 +129,85 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Enhanced Print Styles */
+@media print {
+  /* Hide navigation and non-essential elements */
+  nav,
+  aside,
+  header:not(.print-keep),
+  footer:not(.print-keep),
+  .sidebar,
+  .navigation,
+  [data-sidebar],
+  .print-hidden,
+  button:not(.print-keep) {
+    display: none !important;
+  }
+
+  /* Ensure main content takes full width */
+  main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 1rem !important;
+    max-width: none !important;
+  }
+
+  /* Print-specific styles for analytics dashboard */
+  .print-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Chart containers for print */
+  .recharts-wrapper {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Cards and layout for print */
+  .grid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Table styles for print */
+  table {
+    width: 100% !important;
+    font-size: 12px !important;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .card,
+  .border {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* Optimize colors for print */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Keep chart colors */
+  .recharts-pie-sector,
+  .recharts-bar,
+  .recharts-line {
+    fill: currentColor !important;
+    stroke: currentColor !important;
+  }
+
+  /* Progress bars for print */
+  .bg-blue-600,
+  .bg-yellow-500,
+  .bg-green-500 {
+    background: #333 !important;
+  }
+}

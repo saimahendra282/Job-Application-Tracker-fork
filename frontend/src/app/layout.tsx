@@ -24,11 +24,11 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>
           <div className="h-full relative">
-            <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 z-80">
+            <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 z-80 print:hidden">
               <Navigation />
             </div>
-            <main className="md:pl-72 pb-10">
-              <div className="px-4 py-6 md:px-8">
+            <main className="md:pl-72 pb-10 print:!pl-0 print:!pb-0">
+              <div className="px-4 py-6 md:px-8 print:!px-0 print:!py-0 print-container">
                 {children}
               </div>
             </main>
