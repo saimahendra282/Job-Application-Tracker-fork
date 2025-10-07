@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/lib/providers";
 import { Navigation } from "@/components/navigation";
+import ErrorBoundary from "@/components/error-boundary";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,16 +24,18 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>
-          <div className="h-full relative">
-            <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 z-80 print:hidden">
-              <Navigation />
-            </div>
-            <main className="md:pl-72 pb-10 print:!pl-0 print:!pb-0">
-              <div className="px-4 py-6 md:px-8 print:!px-0 print:!py-0 print-container">
-                {children}
+          <ErrorBoundary>
+            <div className="h-full relative">
+              <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 z-80">
+                <Navigation />
               </div>
-            </main>
-          </div>
+              <main className="md:pl-72 pb-10">
+                <div className="px-4 py-6 md:px-8">
+                  {children}
+                </div>
+              </main>
+            </div>
+          </ErrorBoundary>
         </Providers>
       </body>
     </html>
