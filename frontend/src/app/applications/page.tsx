@@ -3,26 +3,22 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Search, MapPin, Calendar, Columns, Rows } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { Application, ApplicationStatus, Priority } from '@/lib/types';
-import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
+import { ApplicationForm } from '@/components/forms/application-form';
+import { useCreateApplication } from '@/lib/mutations';
+import { FormErrorBoundary } from '@/components/error-boundary';
+import type { ApplicationFormData } from '@/lib/validation';
 
 export default function ApplicationsPage() {
   // Mock data - will be replaced with real API calls
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newCompany, setNewCompany] = useState('');
-  const [newPosition, setNewPosition] = useState('');
-  const [newLocation, setNewLocation] = useState('Remote');
-  const [newStatus, setNewStatus] = useState<ApplicationStatus>('Applied');
-  const [newPriority, setNewPriority] = useState<Priority>('Medium');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [applications, setApplications] = useState<Application[]>([
     {
       id: 1,
@@ -70,41 +66,40 @@ export default function ApplicationsPage() {
     },
   ]);
 
-  function handleAddApplication() {
-    if (!newCompany.trim() || !newPosition.trim()) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
+  const createApplicationMutation = useCreateApplication();
+
+  function handleAddApplication(data: ApplicationFormData) {
+    // In production, this would call the API
+    // For now, we'll use local state
+    const newApplication: Application = {
+      id: (applications.at(-1)?.id || 0) + 1,
+      companyName: data.companyName,
+      position: data.position,
+      location: data.location,
+      jobUrl: data.jobUrl,
+      status: data.status,
+      priority: data.priority,
+      salary: data.salary,
+      salaryMin: data.salaryMin,
+      salaryMax: data.salaryMax,
+      applicationDate: data.applicationDate,
+      responseDate: data.responseDate,
+      offerDate: data.offerDate,
+      jobDescription: data.jobDescription,
+      requirements: data.requirements,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     
-    setIsLoading(true);
+    setApplications((prev) => [newApplication, ...prev]);
+    setIsAddOpen(false);
     
-    try {
-      const newApplication: Application = {
-        id: (applications.at(-1)?.id || 0) + 1,
-        companyName: newCompany.trim(),
-        position: newPosition.trim(),
-        location: newLocation.trim(),
-        status: newStatus,
-        priority: newPriority,
-        applicationDate: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      setApplications((prev) => [newApplication, ...prev]);
-      setIsAddOpen(false);
-      setNewCompany('');
-      setNewPosition('');
-      setNewLocation('Remote');
-      setNewStatus('Applied');
-      setNewPriority('Medium');
-      toast.success('Application added successfully');
-    } catch (error) {
-      console.error('Error adding application:', error);
-      toast.error('Failed to add application');
-    } finally {
-      setIsLoading(false);
-    }
+    // Uncomment this when API is connected:
+    // createApplicationMutation.mutate(data, {
+    //   onSuccess: () => {
+    //     setIsAddOpen(false);
+    //   },
+    // });
   }
 
   const getStatusColor = (status: ApplicationStatus) => {
@@ -172,62 +167,17 @@ export default function ApplicationsPage() {
                 Add Application
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add Application</DialogTitle>
               </DialogHeader>
-              <div className="space-y-3">
-                <Input 
-                  placeholder="Company Name *" 
-                  value={newCompany} 
-                  onChange={(e) => setNewCompany(e.target.value)}
-                  aria-label="Company name"
-                  required
+              <FormErrorBoundary>
+                <ApplicationForm
+                  onSubmit={handleAddApplication}
+                  onCancel={() => setIsAddOpen(false)}
+                  isLoading={createApplicationMutation.isPending}
                 />
-                <Input 
-                  placeholder="Position *" 
-                  value={newPosition} 
-                  onChange={(e) => setNewPosition(e.target.value)}
-                  aria-label="Job position"
-                  required
-                />
-                <Input 
-                  placeholder="Location" 
-                  value={newLocation} 
-                  onChange={(e) => setNewLocation(e.target.value)}
-                  aria-label="Job location"
-                />
-                <div className="flex flex-wrap gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-neutral-600">Status</span>
-                    <Select value={newStatus} onValueChange={(v) => setNewStatus(v as ApplicationStatus)}>
-                      <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {(['Applied','Interview','Offer','Rejected'] as const).map(s => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-neutral-600">Priority</span>
-                    <Select value={newPriority} onValueChange={(v) => setNewPriority(v as Priority)}>
-                      <SelectTrigger className="min-w-[10rem]"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {(['High','Medium','Low'] as const).map(p => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                <Button onClick={handleAddApplication} disabled={isLoading}>
-                  {isLoading ? 'Saving...' : 'Save'}
-                </Button>
-              </DialogFooter>
+              </FormErrorBoundary>
             </DialogContent>
           </Dialog>
         </div>
