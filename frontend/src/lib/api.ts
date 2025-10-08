@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import type { Application, Interview, Note, Contact, Statistics } from './types';
+import type { Application, Interview, Note, Statistics } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
