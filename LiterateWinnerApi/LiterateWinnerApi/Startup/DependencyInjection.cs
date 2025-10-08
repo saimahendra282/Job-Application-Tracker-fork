@@ -221,6 +221,16 @@ public static class DependencyInjection
             // Register enhanced connection manager
             services.AddSingleton<DbConnectionManager>();
 
+            // Get the current environment to conditionally register database providers
+            var serviceProvider = services.BuildServiceProvider();
+            var environment = serviceProvider.GetRequiredService<IHostEnvironment>();
+
+            // Skip database registration for Testing environment - it will be handled by test setup
+            if (environment.EnvironmentName == "Testing")
+            {
+                return services;
+            }
+
             // Calculate optimal pool size based on available processors
             var poolSize = Math.Min(128, Environment.ProcessorCount * 8);
 
@@ -253,7 +263,7 @@ public static class DependencyInjection
                 options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTrackingWithIdentityResolution);
 
                 // Enable sensitive data logging only in development
-                if (services.BuildServiceProvider().GetRequiredService<IHostEnvironment>().IsDevelopment())
+                if (environment.IsDevelopment())
                 {
                     options.EnableSensitiveDataLogging();
                 }
@@ -273,7 +283,7 @@ public static class DependencyInjection
                     });
 
                 // Enable sensitive data logging only in development
-                if (services.BuildServiceProvider().GetRequiredService<IHostEnvironment>().IsDevelopment())
+                if (environment.IsDevelopment())
                 {
                     options.EnableSensitiveDataLogging();
                 }
