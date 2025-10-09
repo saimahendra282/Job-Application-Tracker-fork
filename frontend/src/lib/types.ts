@@ -115,3 +115,49 @@ export interface SortConfig {
   field: SortOption;
   direction: 'asc' | 'desc';
 }
+
+// Analytics Types
+export interface ChartDataPoint {
+  name: string;
+  value: number;
+  color?: string;
+}
+
+export interface TimelineDataPoint {
+  date: string;
+  applications: number;
+  responses: number;
+  interviews?: number;
+  offers?: number;
+}
+
+export interface SalaryDataPoint {
+  range: string;
+  count: number;
+  average?: number;
+}
+
+export interface CompanyAnalytics {
+  company: string;
+  applications: number;
+  responses: number;
+  interviews: number;
+  offers: number;
+  responseRate: number;
+  averageResponseTime?: number;
+}
+
+export interface AnalyticsMetrics {
+  totalApplications: number;
+  responseRate: number;
+  interviewRate: number;
+  offerRate: number;
+  averageResponseTime: number;
+  averageInterviewWaitTime: number;
+  averageSalary: number;
+}
+
+export interface DateRange {
+  from: string;
+  to: string;
+}
